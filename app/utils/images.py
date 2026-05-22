@@ -38,9 +38,7 @@ async def extract_image_url(client: httpx.AsyncClient, page_url: str) -> str | N
         return None
 
     for key in _IMAGE_META:
-        tag = soup.find("meta", attrs={"property": key}) or soup.find(
-            "meta", attrs={"name": key}
-        )
+        tag = soup.find("meta", attrs={"property": key}) or soup.find("meta", attrs={"name": key})
         content = tag.get("content") if tag else None
         if not content:
             continue

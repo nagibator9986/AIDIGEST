@@ -74,8 +74,7 @@ def test_render_card_fits_telegram_caption_limit() -> None:
 def test_render_breaking_news_fits_caption_limit() -> None:
     long = "Срочная новость про взлом и новую модель. " * 30
     caption = render_breaking_news(
-        _news(title="Срочно " * 20, summary_ru=long, utility_ru=long,
-              key_points=[long, long])
+        _news(title="Срочно " * 20, summary_ru=long, utility_ru=long, key_points=[long, long])
     )
     assert "Срочная" in caption
     assert len(caption) <= _CAPTION_LIMIT

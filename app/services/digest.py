@@ -89,8 +89,7 @@ def render_header(on_date: date, count: int) -> str:
     if count == 0:
         return (
             "🤖 *AI Insight Digest*\n"
-            f"📅 {escape_markdown_v2(_render_date(on_date))}\n\n"
-            + escape_markdown_v2(_EMPTY_TEXT)
+            f"📅 {escape_markdown_v2(_render_date(on_date))}\n\n" + escape_markdown_v2(_EMPTY_TEXT)
         )
     return (
         "🤖 *AI Insight Digest*\n"

@@ -300,9 +300,7 @@ async def deliver_now(bot: Bot, chat_id: int) -> tuple[bool, int]:
 
     content = await build_digest_content(local_date)
     broadcaster = Broadcaster(bot)
-    result = await broadcaster.deliver_digest(
-        content.header, content.cards, [chat_id]
-    )
+    result = await broadcaster.deliver_digest(content.header, content.cards, [chat_id])
     if chat_id not in result.sent:
         log.warning(
             "delivery.manual_failed",

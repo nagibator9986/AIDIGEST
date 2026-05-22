@@ -80,7 +80,5 @@ def build_user_prompt(*, source: str, title: str, url: str, content: str) -> str
         source=source,
         title=title,
         url=url,
-        content=(content or "(описание отсутствует — оценивай по заголовку и URL)")[
-            :6000
-        ],
+        content=(content or "(описание отсутствует — оценивай по заголовку и URL)")[:6000],
     )

@@ -51,9 +51,7 @@ class Broadcaster:
         self._bot = bot
         self._delay = 1.0 / messages_per_second
 
-    async def _deliver_message(
-        self, chat_id: int, text: str, image_url: str | None
-    ) -> None:
+    async def _deliver_message(self, chat_id: int, text: str, image_url: str | None) -> None:
         """Send one message — a photo with caption, or plain text."""
         if image_url:
             try:
@@ -80,9 +78,7 @@ class Broadcaster:
             await asyncio.sleep(exc.retry_after + 1)
             await self._deliver_message(chat_id, text, image_url)
 
-    async def send_one(
-        self, chat_id: int, text: str, image_url: str | None = None
-    ) -> None:
+    async def send_one(self, chat_id: int, text: str, image_url: str | None = None) -> None:
         """Send a single message (optionally a photo) to one chat."""
         await self._send(chat_id, text, image_url)
 

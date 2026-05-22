@@ -20,11 +20,11 @@ from app.utils.text import clean_html
 # the digest serves a wide audience — not only programmers. Bigger, noisier
 # subreddits carry a higher upvote floor.
 _SUBREDDITS: dict[str, int] = {
-    "LocalLLaMA": 80,        # open-source models & tooling
+    "LocalLLaMA": 80,  # open-source models & tooling
     "MachineLearning": 150,  # research & engineering
-    "OpenAI": 200,           # product news, broad audience
-    "artificial": 250,       # general AI discussion
-    "ChatGPT": 600,          # mass-audience; high floor to cut noise
+    "OpenAI": 200,  # product news, broad audience
+    "artificial": 250,  # general AI discussion
+    "ChatGPT": 600,  # mass-audience; high floor to cut noise
 }
 
 
