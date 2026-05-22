@@ -233,9 +233,9 @@ async def add_extra_source(session: AsyncSession, item_id: uuid.UUID, url: str) 
 _SOURCE_RANK = case(
     {
         "rss": 0,
-        "huggingface": 1,
-        "hackernews": 2,
-        "reddit": 3,
+        "technews": 1,
+        "huggingface": 2,
+        "hackernews": 3,
         "producthunt": 4,
         "github": 5,
     },
@@ -246,7 +246,7 @@ _SOURCE_RANK = case(
 
 # Round-robin order across sources, so a limited scoring budget spans every
 # source instead of being eaten by whichever source collected the most items.
-_SOURCE_ORDER = ("rss", "huggingface", "hackernews", "reddit", "producthunt", "github")
+_SOURCE_ORDER = ("rss", "technews", "huggingface", "hackernews", "producthunt", "github")
 
 
 async def list_unscored(session: AsyncSession, limit: int = 100) -> list[NewsItem]:

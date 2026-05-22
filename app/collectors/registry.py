@@ -7,17 +7,17 @@ from app.collectors.github_trending import GitHubTrendingCollector
 from app.collectors.hackernews import HackerNewsCollector
 from app.collectors.huggingface import HuggingFaceCollector
 from app.collectors.producthunt import ProductHuntCollector
-from app.collectors.reddit import RedditCollector
 from app.collectors.rss import RssCollector
+from app.collectors.technews import TechNewsCollector
 
 
 def build_collectors() -> list[Collector]:
     """Return the active collector set for an ingestion cycle."""
     collectors: list[Collector] = [
         RssCollector(),  # tier 1 — first-party vendor announcements
+        TechNewsCollector(),  # tier 1 — broad-audience AI tech press
         HackerNewsCollector(),  # tier 2 — engineer-vetted discussion
-        RedditCollector(),  # tier 2 — open-source tooling chatter
-        HuggingFaceCollector(),  # tier 1 — open-source research
+        HuggingFaceCollector(),  # tier 2 — open-source research
         GitHubTrendingCollector(),  # tier 3 — trending tools
     ]
     if ProductHuntCollector.is_enabled():

@@ -10,6 +10,7 @@ respx = pytest.importorskip("respx")
 from app.collectors.base import make_http_client  # noqa: E402
 from app.collectors.github_trending import GitHubTrendingCollector  # noqa: E402
 from app.collectors.hackernews import HackerNewsCollector  # noqa: E402
+from app.collectors.technews import TechNewsCollector  # noqa: E402
 
 pytestmark = pytest.mark.asyncio
 
@@ -85,3 +86,32 @@ async def test_github_trending_filters_by_relevance() -> None:
     urls = {it.url for it in items}
     assert "https://github.com/acme/llm-agent-kit" in urls
     assert "https://github.com/acme/css-helper" not in urls
+
+
+_TECHNEWS_RSS = """<?xml version="1.0"?>
+<rss version="2.0"><channel>
+  <item>
+    <title>OpenAI launches a new AI tool for analysts</title>
+    <link>https://techcrunch.com/2026/05/ai-tool</link>
+    <description>A practical AI assistant for data work.</description>
+    <pubDate>Mon, 18 May 2026 10:00:00 +0000</pubDate>
+  </item>
+  <item>
+    <title>The best office chairs of 2026</title>
+    <link>https://techcrunch.com/2026/05/chairs</link>
+    <description>Ergonomics roundup.</description>
+    <pubDate>Mon, 18 May 2026 10:00:00 +0000</pubDate>
+  </item>
+</channel></rss>"""
+
+
+@respx.mock
+async def test_technews_keeps_only_ai_stories() -> None:
+    respx.get(url__regex=r"https://.*").mock(return_value=httpx.Response(200, text=_TECHNEWS_RSS))
+    async with make_http_client() as client:
+        items = await TechNewsCollector().collect(client)
+
+    titles = {it.title for it in items}
+    assert "OpenAI launches a new AI tool for analysts" in titles
+    assert "The best office chairs of 2026" not in titles
+    assert all(it.source == "technews" for it in items)

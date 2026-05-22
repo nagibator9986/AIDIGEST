@@ -69,9 +69,9 @@ Runs every `INGEST_INTERVAL_HOURS`.
 | Tier | Collector | Anti-hype gate |
 |---|---|---|
 | 1 | RSS (OpenAI, DeepMind, HF, Meta AI, …) | trusted first-party |
-| 1 | Hugging Face Daily Papers | upvote-ranked research |
+| 1 | Tech press (TechCrunch AI, VentureBeat AI, MIT TR, …) | AI-keyword relevance filter |
+| 2 | Hugging Face Daily Papers | upvote-ranked research |
 | 2 | Hacker News (Algolia API) | `points ≥ HN_MIN_SCORE` |
-| 2 | Reddit (`r/LocalLLaMA`, `r/MachineLearning`) | per-subreddit score floor |
 | 3 | GitHub Trending | AI-keyword relevance filter |
 | 3 | Product Hunt *(optional)* | AI-topic filter |
 

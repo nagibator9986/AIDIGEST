@@ -34,7 +34,8 @@ START_PRIVATE = (
 HELP = (
     "<b>AI Insight Digest — справка</b>\n\n"
     "Я собираю новости AI из первоисточников (OpenAI, Google DeepMind, "
-    "Hugging Face), технических хабов (Hacker News, Reddit) и GitHub Trending, "
+    "Hugging Face), деловой тех-прессы (TechCrunch, VentureBeat), Hacker News "
+    "и GitHub Trending, "
     "оцениваю каждую через Gemini и присылаю в чаты дайджест по расписанию.\n\n"
     "<b>Команды в чате (для администраторов):</b>\n"
     "• /settings — панель настроек с кнопками\n"

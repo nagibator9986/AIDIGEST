@@ -4,7 +4,8 @@ A Telegram bot that **collects, semantically scores and broadcasts a daily
 digest of the most significant AI/ML news** — and ruthlessly filters out the
 hype.
 
-Every day it pulls from first-party vendor blogs, Hacker News, Reddit, Hugging
+Every day it pulls from first-party vendor blogs, the AI tech press
+(TechCrunch, VentureBeat, MIT Technology Review …), Hacker News, Hugging
 Face and GitHub Trending, hands each candidate to **Google Gemini** for a
 1–10 significance score, and delivers a clean, scannable digest of the top
 items to every subscribed chat — each at its own configured time.
@@ -19,7 +20,7 @@ collect → deduplicate → score (Gemini) → urgent push / scheduled digest �
 
 | Capability | What it does |
 |---|---|
-| **Tiered sources** | Vendor blogs (tier 1) → HN/Reddit (tier 2) → GitHub/Product Hunt (tier 3), each with its own anti-hype gate. |
+| **Tiered sources** | Vendor blogs + AI tech press (tier 1) → HN/Hugging Face (tier 2) → GitHub/Product Hunt (tier 3), each with its own anti-hype gate. |
 | **Two-layer dedup** | Exact normalised-URL match **and** fuzzy title matching — the same release reported by three sources collapses into one item with merged links. |
 | **Structured AI scoring** | Gemini is called with a Pydantic `response_schema`, so the result is always a typed verdict — never unparseable free text. |
 | **Automatic editorial routing** | Score `< 7` is rejected, `7–8` goes to the scheduled digest automatically, and `9–10` is pushed to chats immediately as an urgent alert. |
