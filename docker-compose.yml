@@ -1,0 +1,46 @@
+name: ai-insight-digest
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aidigest
+      POSTGRES_PASSWORD: aidigest
+      POSTGRES_DB: aidigest
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aidigest -d aidigest"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # No host port published — the bot reaches Postgres over the internal
+    # Docker network. To inspect the DB: `docker compose exec postgres psql -U aidigest`.
+
+  # One-shot service: applies Alembic migrations, then exits.
+  migrate:
+    build: .
+    command: ["python", "-m", "alembic", "upgrade", "head"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://aidigest:aidigest@postgres:5432/aidigest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  bot:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://aidigest:aidigest@postgres:5432/aidigest
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:

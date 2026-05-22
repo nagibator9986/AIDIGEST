@@ -1,0 +1,21 @@
+.git
+.gitignore
+.venv
+venv
+__pycache__
+*.py[cod]
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.coverage
+htmlcov
+coverage.xml
+.env
+*.sqlite3
+*.db
+*.log
+logs
+tests
+docs
+ARCHITECTURE.md
+# README.md is NOT ignored — pyproject.toml references it as the package readme.
