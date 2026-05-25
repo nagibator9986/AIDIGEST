@@ -3,7 +3,14 @@
 from __future__ import annotations
 
 import pytest
-from app.config import Settings, get_settings, normalize_schedule, normalize_weekdays, parse_hhmm
+from app.config import (
+    Settings,
+    get_database_url,
+    get_settings,
+    normalize_schedule,
+    normalize_weekdays,
+    parse_hhmm,
+)
 
 
 @pytest.mark.parametrize(
@@ -41,6 +48,14 @@ def test_real_producthunt_token_is_kept() -> None:
     settings = Settings(producthunt_token="ph_secret_123")
     assert settings.producthunt_token is not None
     assert settings.producthunt_token.get_secret_value() == "ph_secret_123"
+
+
+def test_database_url_does_not_require_runtime_secrets(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("BOT_TOKEN", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setenv("DATABASE_URL", "postgres://user:pass@db.example.com:5432/app")
+
+    assert get_database_url() == "postgresql+asyncpg://user:pass@db.example.com:5432/app"
 
 
 def test_normalize_schedule_sorts_and_dedups() -> None:

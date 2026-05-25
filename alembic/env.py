@@ -8,7 +8,7 @@ from alembic import context
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from app.config import get_settings
+from app.config import get_database_url
 from app.db.base import Base
 from app.db import models  # noqa: F401  -- import side-effect: registers tables
 
@@ -17,8 +17,8 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Inject the real database URL from application settings.
-config.set_main_option("sqlalchemy.url", get_settings().database_url)
+# Inject the real database URL without requiring bot/AI runtime secrets.
+config.set_main_option("sqlalchemy.url", get_database_url())
 
 target_metadata = Base.metadata
 

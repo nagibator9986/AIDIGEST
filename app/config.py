@@ -24,6 +24,15 @@ from pydantic_settings import (
 _RAW_CSV_FIELDS = {"admin_ids", "extra_rss_feeds"}
 
 
+def _coerce_async_database_url(value: object) -> object:
+    """Rewrite platform Postgres URLs to the async driver used by the app."""
+    if isinstance(value, str):
+        for prefix in ("postgresql://", "postgres://"):
+            if value.startswith(prefix):
+                return "postgresql+asyncpg://" + value[len(prefix) :]
+    return value
+
+
 class _RawCsvEnvSource(EnvSettingsSource):
     """Keep selected env vars as raw strings so validators can parse CSV values."""
 
@@ -144,11 +153,7 @@ class Settings(BaseSettings):
         Managed platforms (Railway, Heroku, Render) inject ``DATABASE_URL`` as
         ``postgres://`` / ``postgresql://``; the app needs ``+asyncpg``.
         """
-        if isinstance(value, str):
-            for prefix in ("postgresql://", "postgres://"):
-                if value.startswith(prefix):
-                    return "postgresql+asyncpg://" + value[len(prefix) :]
-        return value
+        return _coerce_async_database_url(value)
 
     @field_validator("digest_time")
     @classmethod
@@ -287,3 +292,26 @@ def normalize_weekdays(days: Sequence[str | int]) -> list[int]:
 def get_settings() -> Settings:
     """Return the process-wide settings singleton."""
     return Settings()
+
+
+class DatabaseSettings(BaseSettings):
+    """Minimal settings for tools that only need a database connection."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=False,
+    )
+
+    database_url: str = Settings.model_fields["database_url"].default
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _async_database_url(cls, value: object) -> object:
+        return _coerce_async_database_url(value)
+
+
+def get_database_url() -> str:
+    """Return the database URL without requiring runtime service secrets."""
+    return DatabaseSettings().database_url
