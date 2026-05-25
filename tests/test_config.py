@@ -73,6 +73,13 @@ def test_railway_rejects_localhost_database_url(monkeypatch: pytest.MonkeyPatch)
         Settings(database_url="postgresql+asyncpg://aidigest:aidigest@localhost:5432/aidigest")
 
 
+def test_invalid_database_url_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DATABASE_URL", "${{MissingService.DATABASE_URL}}")
+
+    with pytest.raises(ValueError, match="DATABASE_URL has invalid format"):
+        get_database_url()
+
+
 def test_normalize_schedule_sorts_and_dedups() -> None:
     assert normalize_schedule(["18:00", "9:00", "09:00"]) == ["09:00", "18:00"]
 

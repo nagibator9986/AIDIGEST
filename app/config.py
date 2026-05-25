@@ -21,6 +21,8 @@ from pydantic_settings import (
     PydanticBaseSettingsSource,
     SettingsConfigDict,
 )
+from sqlalchemy.engine.url import make_url
+from sqlalchemy.exc import ArgumentError
 
 _RAW_CSV_FIELDS = {"admin_ids", "extra_rss_feeds"}
 
@@ -43,7 +45,20 @@ def _database_url_points_to_localhost(value: str) -> bool:
     return "@localhost:" in value or "@127.0.0.1:" in value or "@[::1]:" in value
 
 
+def _validate_database_url_format(value: str) -> str:
+    try:
+        make_url(value)
+    except ArgumentError as exc:
+        raise ValueError(
+            "DATABASE_URL has invalid format. Use a plain Postgres URL like "
+            "'postgresql://user:password@host:5432/database' or a Railway "
+            "reference that resolves to one, for example '${{Postgres.DATABASE_URL}}'."
+        ) from exc
+    return value
+
+
 def _validate_managed_database_url(value: str) -> str:
+    _validate_database_url_format(value)
     if _running_on_railway() and (
         not os.getenv("DATABASE_URL") or _database_url_points_to_localhost(value)
     ):
