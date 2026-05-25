@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+from email.utils import format_datetime
+
 import httpx
 import pytest
 
@@ -13,6 +16,9 @@ from app.collectors.hackernews import HackerNewsCollector  # noqa: E402
 from app.collectors.technews import TechNewsCollector  # noqa: E402
 
 pytestmark = pytest.mark.asyncio
+
+# Recent pubDate so the lookback window does not drop the fixture as it ages.
+_RECENT_PUBDATE = format_datetime(datetime.now(UTC) - timedelta(days=1))
 
 
 @respx.mock
@@ -88,19 +94,19 @@ async def test_github_trending_filters_by_relevance() -> None:
     assert "https://github.com/acme/css-helper" not in urls
 
 
-_TECHNEWS_RSS = """<?xml version="1.0"?>
+_TECHNEWS_RSS = f"""<?xml version="1.0"?>
 <rss version="2.0"><channel>
   <item>
     <title>OpenAI launches a new AI tool for analysts</title>
     <link>https://techcrunch.com/2026/05/ai-tool</link>
     <description>A practical AI assistant for data work.</description>
-    <pubDate>Mon, 18 May 2026 10:00:00 +0000</pubDate>
+    <pubDate>{_RECENT_PUBDATE}</pubDate>
   </item>
   <item>
     <title>The best office chairs of 2026</title>
     <link>https://techcrunch.com/2026/05/chairs</link>
     <description>Ergonomics roundup.</description>
-    <pubDate>Mon, 18 May 2026 10:00:00 +0000</pubDate>
+    <pubDate>{_RECENT_PUBDATE}</pubDate>
   </item>
 </channel></rss>"""
 

@@ -5,7 +5,6 @@ from __future__ import annotations
 import uuid
 
 import pytest
-
 from app.services.broadcaster import Broadcaster, ChatDestination
 from app.services.digest import DigestCard
 

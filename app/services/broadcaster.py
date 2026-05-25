@@ -74,18 +74,15 @@ class Broadcaster:
         self, destination: ChatDestination, text: str, image_url: str | None
     ) -> None:
         """Send one message — a photo with caption, or plain text."""
-        kwargs = {
-            "chat_id": destination.chat_id,
-            "parse_mode": ParseMode.MARKDOWN_V2,
-        }
-        if destination.message_thread_id is not None:
-            kwargs["message_thread_id"] = destination.message_thread_id
+        thread_id = destination.message_thread_id
         if image_url:
             try:
                 await self._bot.send_photo(
+                    chat_id=destination.chat_id,
                     photo=image_url,
                     caption=text,
-                    **kwargs,
+                    parse_mode=ParseMode.MARKDOWN_V2,
+                    message_thread_id=thread_id,
                 )
                 return
             except (TelegramRetryAfter, TelegramForbiddenError):
@@ -95,7 +92,12 @@ class Broadcaster:
                 log.info(
                     "broadcast.photo_fallback", chat_id=destination.chat_id, error=str(exc)
                 )
-        await self._bot.send_message(text=text, **kwargs)
+        await self._bot.send_message(
+            chat_id=destination.chat_id,
+            text=text,
+            parse_mode=ParseMode.MARKDOWN_V2,
+            message_thread_id=thread_id,
+        )
 
     async def _send(
         self, destination: ChatDestination, text: str, image_url: str | None
