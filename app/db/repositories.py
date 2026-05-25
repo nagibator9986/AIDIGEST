@@ -161,6 +161,17 @@ async def set_paused(session: AsyncSession, chat_id: int, paused: bool) -> bool:
     return True
 
 
+async def set_message_thread(
+    session: AsyncSession, chat_id: int, message_thread_id: int | None
+) -> bool:
+    """Route digest messages to a Telegram forum topic. Returns False if unknown."""
+    group = await session.get(Group, chat_id)
+    if group is None:
+        return False
+    group.message_thread_id = message_thread_id
+    return True
+
+
 async def mark_slot_sent(session: AsyncSession, chat_id: int, on_date: date, slot: str) -> None:
     """Record that *slot* was delivered to *chat_id* on *on_date*.
 

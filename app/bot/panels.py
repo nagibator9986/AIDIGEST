@@ -32,6 +32,7 @@ def render_settings_panel(group: Group) -> tuple[str, InlineKeyboardMarkup]:
         freq=plural_times(len(times)) if times else "—",
         days=html.escape(format_weekdays(group.digest_days)),
         tz=html.escape(group.timezone),
+        topic="закреплена" if group.message_thread_id is not None else "основной чат",
         status_line=status,
     )
     return text, settings_keyboard(paused=group.digest_paused, days=group.digest_days)

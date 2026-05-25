@@ -61,6 +61,8 @@ class Group(TimestampMixin, Base):
     title: Mapped[str] = mapped_column(String(255), default="")
     chat_type: Mapped[str] = mapped_column(String(32), default="group")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    # Telegram forum topic for digest delivery. ``None`` means the main chat.
+    message_thread_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # Per-chat delivery schedule: a list of "HH:MM" slots interpreted in
     # `timezone`. One digest is delivered per slot per day.

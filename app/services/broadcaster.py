@@ -15,7 +15,9 @@ mode explicitly:
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Sequence
 from dataclasses import dataclass, field
+from typing import TypeAlias
 
 from aiogram import Bot
 from aiogram.enums import ParseMode
@@ -29,6 +31,17 @@ from app.logging import get_logger
 from app.services.digest import DigestCard
 
 log = get_logger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class ChatDestination:
+    """A Telegram chat, optionally narrowed to a forum topic."""
+
+    chat_id: int
+    message_thread_id: int | None = None
+
+
+DestinationInput: TypeAlias = int | ChatDestination
 
 
 @dataclass(slots=True)
@@ -51,73 +64,103 @@ class Broadcaster:
         self._bot = bot
         self._delay = 1.0 / messages_per_second
 
-    async def _deliver_message(self, chat_id: int, text: str, image_url: str | None) -> None:
+    @staticmethod
+    def _destination(value: DestinationInput) -> ChatDestination:
+        if isinstance(value, ChatDestination):
+            return value
+        return ChatDestination(chat_id=value)
+
+    async def _deliver_message(
+        self, destination: ChatDestination, text: str, image_url: str | None
+    ) -> None:
         """Send one message — a photo with caption, or plain text."""
+        kwargs = {
+            "chat_id": destination.chat_id,
+            "parse_mode": ParseMode.MARKDOWN_V2,
+        }
+        if destination.message_thread_id is not None:
+            kwargs["message_thread_id"] = destination.message_thread_id
         if image_url:
             try:
                 await self._bot.send_photo(
-                    chat_id,
                     photo=image_url,
                     caption=text,
-                    parse_mode=ParseMode.MARKDOWN_V2,
+                    **kwargs,
                 )
                 return
             except (TelegramRetryAfter, TelegramForbiddenError):
                 raise
             except TelegramBadRequest as exc:
                 # Unusable image (Telegram could not fetch it) — degrade to text.
-                log.info("broadcast.photo_fallback", chat_id=chat_id, error=str(exc))
-        await self._bot.send_message(chat_id, text, parse_mode=ParseMode.MARKDOWN_V2)
+                log.info(
+                    "broadcast.photo_fallback", chat_id=destination.chat_id, error=str(exc)
+                )
+        await self._bot.send_message(text=text, **kwargs)
 
-    async def _send(self, chat_id: int, text: str, image_url: str | None) -> None:
+    async def _send(
+        self, destination: ChatDestination, text: str, image_url: str | None
+    ) -> None:
         """Send one message, honouring a single ``RetryAfter`` back-off."""
         try:
-            await self._deliver_message(chat_id, text, image_url)
+            await self._deliver_message(destination, text, image_url)
         except TelegramRetryAfter as exc:
-            log.warning("broadcast.retry_after", chat_id=chat_id, seconds=exc.retry_after)
+            log.warning(
+                "broadcast.retry_after",
+                chat_id=destination.chat_id,
+                seconds=exc.retry_after,
+            )
             await asyncio.sleep(exc.retry_after + 1)
-            await self._deliver_message(chat_id, text, image_url)
+            await self._deliver_message(destination, text, image_url)
 
-    async def send_one(self, chat_id: int, text: str, image_url: str | None = None) -> None:
+    async def send_one(
+        self,
+        chat_id: int,
+        text: str,
+        image_url: str | None = None,
+        *,
+        message_thread_id: int | None = None,
+    ) -> None:
         """Send a single message (optionally a photo) to one chat."""
-        await self._send(chat_id, text, image_url)
+        await self._send(ChatDestination(chat_id, message_thread_id), text, image_url)
 
     async def broadcast(
-        self, text: str, chat_ids: list[int], *, image_url: str | None = None
+        self, text: str, chat_ids: Sequence[DestinationInput], *, image_url: str | None = None
     ) -> BroadcastResult:
         """Deliver one message (optionally a photo) to every chat."""
         result = BroadcastResult()
-        for chat_id in chat_ids:
+        for value in chat_ids:
+            destination = self._destination(value)
             try:
-                await self._send(chat_id, text, image_url)
-                result.sent.append(chat_id)
+                await self._send(destination, text, image_url)
+                result.sent.append(destination.chat_id)
             except TelegramForbiddenError:
-                result.blocked.append(chat_id)
-                log.info("broadcast.blocked", chat_id=chat_id)
+                result.blocked.append(destination.chat_id)
+                log.info("broadcast.blocked", chat_id=destination.chat_id)
             except Exception as exc:
-                result.failed[chat_id] = str(exc)
-                log.warning("broadcast.failed", chat_id=chat_id, error=str(exc))
+                result.failed[destination.chat_id] = str(exc)
+                log.warning("broadcast.failed", chat_id=destination.chat_id, error=str(exc))
             await asyncio.sleep(self._delay)
         return result
 
     async def deliver_digest(
-        self, header: str, cards: list[DigestCard], chat_ids: list[int]
+        self, header: str, cards: list[DigestCard], chat_ids: Sequence[DestinationInput]
     ) -> BroadcastResult:
         """Deliver a digest — a header message then one card per item."""
         result = BroadcastResult()
-        for chat_id in chat_ids:
+        for value in chat_ids:
+            destination = self._destination(value)
             try:
-                await self._send(chat_id, header, None)
+                await self._send(destination, header, None)
                 for card in cards:
                     await asyncio.sleep(self._delay)
-                    await self._send(chat_id, card.text, card.image_url)
-                result.sent.append(chat_id)
+                    await self._send(destination, card.text, card.image_url)
+                result.sent.append(destination.chat_id)
             except TelegramForbiddenError:
-                result.blocked.append(chat_id)
-                log.info("broadcast.blocked", chat_id=chat_id)
+                result.blocked.append(destination.chat_id)
+                log.info("broadcast.blocked", chat_id=destination.chat_id)
             except Exception as exc:
-                result.failed[chat_id] = str(exc)
-                log.warning("broadcast.failed", chat_id=chat_id, error=str(exc))
+                result.failed[destination.chat_id] = str(exc)
+                log.warning("broadcast.failed", chat_id=destination.chat_id, error=str(exc))
             await asyncio.sleep(self._delay)
 
         log.info(

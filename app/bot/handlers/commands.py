@@ -1,5 +1,5 @@
 """User-facing commands: /start, /help, /settings, /status, /digest_now,
-/digest_time, /digest_days, /timezone.
+/digest_time, /digest_days, /timezone, /digest_topic.
 
 The chat-management commands are registered on both the ``message`` and
 ``channel_post`` observers: a command typed inside a channel arrives as a
@@ -75,6 +75,40 @@ async def cmd_digest_now(message: Message, bot: Bot) -> None:
         await notice.edit_text(text)
     except Exception:
         await message.answer(text)
+
+
+@router.message(Command("digest_topic"))
+@router.channel_post(Command("digest_topic"))
+async def cmd_digest_topic(
+    message: Message, command: CommandObject, bot: Bot, session: AsyncSession
+) -> None:
+    """Bind scheduled digests to the Telegram forum topic where the command is sent."""
+    if not is_managed_chat(message):
+        await message.answer(texts.NOT_GROUP)
+        return
+    if not await is_authorized_operator(bot, message):
+        await message.answer(texts.NOT_CHAT_ADMIN, parse_mode=ParseMode.HTML)
+        return
+
+    raw = (command.args or "").strip().lower()
+    if raw in {"off", "reset", "none", "main", "общий", "сброс"}:
+        if not await repo.set_message_thread(session, message.chat.id, None):
+            await message.answer(texts.GROUP_UNKNOWN, parse_mode=ParseMode.HTML)
+            return
+        await message.answer(texts.DIGEST_TOPIC_RESET, parse_mode=ParseMode.HTML)
+        return
+
+    thread_id = message.message_thread_id
+    if thread_id is None:
+        await message.answer(texts.DIGEST_TOPIC_USAGE, parse_mode=ParseMode.HTML)
+        return
+
+    if not await repo.set_message_thread(session, message.chat.id, thread_id):
+        await message.answer(texts.GROUP_UNKNOWN, parse_mode=ParseMode.HTML)
+        return
+
+    log.info("group.topic_changed", chat_id=message.chat.id, message_thread_id=thread_id)
+    await message.answer(texts.DIGEST_TOPIC_OK, parse_mode=ParseMode.HTML)
 
 
 @router.message(Command("digest_time"))

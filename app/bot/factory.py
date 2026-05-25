@@ -31,6 +31,7 @@ _GROUP_COMMANDS = [
     BotCommand(command="digest_time", description="Время доставки (1–8 раз/день)"),
     BotCommand(command="digest_days", description="Дни отправки плановых новостей"),
     BotCommand(command="timezone", description="Часовой пояс чата"),
+    BotCommand(command="digest_topic", description="Тема для отправки дайджеста"),
     BotCommand(command="digest_now", description="Прислать дайджест сейчас"),
     BotCommand(command="help", description="Справка"),
 ]

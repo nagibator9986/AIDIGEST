@@ -225,6 +225,22 @@ async def test_set_paused_and_timezone(session: AsyncSession) -> None:
     assert group.timezone == "Asia/Almaty"
 
 
+async def test_set_message_thread_routes_digest_to_topic(session: AsyncSession) -> None:
+    await _make_group(session, -508)
+
+    assert await repo.set_message_thread(session, -508, 12345) is True
+    group = await repo.get_group(session, -508)
+    assert group is not None
+    assert group.message_thread_id == 12345
+
+    assert await repo.set_message_thread(session, -508, None) is True
+    assert group.message_thread_id is None
+
+
+async def test_set_message_thread_unknown_chat(session: AsyncSession) -> None:
+    assert await repo.set_message_thread(session, -999, 12345) is False
+
+
 async def test_resume_premarks_past_slots(
     session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:

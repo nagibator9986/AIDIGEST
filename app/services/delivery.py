@@ -21,7 +21,7 @@ from app.db.base import session_scope
 from app.db.models import Group, NewsItem
 from app.domain.enums import DeliveryStatus, NewsStatus
 from app.logging import get_logger
-from app.services.broadcaster import Broadcaster
+from app.services.broadcaster import Broadcaster, ChatDestination
 from app.services.digest import (
     build_digest_content,
     ensure_item_image,
@@ -125,7 +125,9 @@ async def run_due_deliveries(bot: Bot) -> DeliveryReport:
 
     broadcaster = Broadcaster(bot)
     result = await broadcaster.deliver_digest(
-        content.header, content.cards, [g.id for g, _, _ in due]
+        content.header,
+        content.cards,
+        [ChatDestination(g.id, g.message_thread_id) for g, _, _ in due],
     )
     sent = set(result.sent)
     blocked = set(result.blocked)
@@ -219,12 +221,12 @@ async def run_breaking_deliveries(
         return report
 
     broadcaster = Broadcaster(bot)
-    chat_ids = [group.id for group in groups]
+    destinations = [ChatDestination(group.id, group.message_thread_id) for group in groups]
     local_dates = {group.id: now_in(group.timezone).date() for group in groups}
 
     for item in items:
         result = await broadcaster.broadcast(
-            render_breaking_news(item), chat_ids, image_url=item.image_url or None
+            render_breaking_news(item), destinations, image_url=item.image_url or None
         )
         sent = set(result.sent)
         blocked = set(result.blocked)
@@ -296,11 +298,14 @@ async def deliver_now(bot: Bot, chat_id: int) -> tuple[bool, int]:
         group = await repo.get_group(session, chat_id)
         registered = group is not None
         tz = group.timezone if group else get_settings().timezone
+        message_thread_id = group.message_thread_id if group else None
     local_date = now_in(tz).date()
 
     content = await build_digest_content(local_date)
     broadcaster = Broadcaster(bot)
-    result = await broadcaster.deliver_digest(content.header, content.cards, [chat_id])
+    result = await broadcaster.deliver_digest(
+        content.header, content.cards, [ChatDestination(chat_id, message_thread_id)]
+    )
     if chat_id not in result.sent:
         log.warning(
             "delivery.manual_failed",
