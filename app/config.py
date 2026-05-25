@@ -6,13 +6,14 @@ Nothing else in the codebase should read `os.environ` directly.
 
 from __future__ import annotations
 
+import os
 import zoneinfo
 from collections.abc import Sequence
 from datetime import time
 from functools import lru_cache
 from typing import Any
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import (
     BaseSettings,
     DotEnvSettingsSource,
@@ -30,6 +31,27 @@ def _coerce_async_database_url(value: object) -> object:
         for prefix in ("postgresql://", "postgres://"):
             if value.startswith(prefix):
                 return "postgresql+asyncpg://" + value[len(prefix) :]
+    return value
+
+
+def _running_on_railway() -> bool:
+    """Railway injects several RAILWAY_* variables into deployed services."""
+    return any(key.startswith("RAILWAY_") for key in os.environ)
+
+
+def _database_url_points_to_localhost(value: str) -> bool:
+    return "@localhost:" in value or "@127.0.0.1:" in value or "@[::1]:" in value
+
+
+def _validate_managed_database_url(value: str) -> str:
+    if _running_on_railway() and (
+        not os.getenv("DATABASE_URL") or _database_url_points_to_localhost(value)
+    ):
+        raise ValueError(
+            "DATABASE_URL is not configured for this Railway service. "
+            "Attach a PostgreSQL database and set the bot service DATABASE_URL "
+            "variable to the database connection string/reference."
+        )
     return value
 
 
@@ -169,6 +191,11 @@ class Settings(BaseSettings):
         except zoneinfo.ZoneInfoNotFoundError as exc:  # pragma: no cover
             raise ValueError(f"Unknown timezone: {value}") from exc
         return value
+
+    @model_validator(mode="after")
+    def _validate_deploy_database_url(self) -> Settings:
+        self.database_url = _validate_managed_database_url(self.database_url)
+        return self
 
     # ── Derived helpers ────────────────────────────────────────────────────
     @property
@@ -314,4 +341,4 @@ class DatabaseSettings(BaseSettings):
 
 def get_database_url() -> str:
     """Return the database URL without requiring runtime service secrets."""
-    return DatabaseSettings().database_url
+    return _validate_managed_database_url(DatabaseSettings().database_url)

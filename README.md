@@ -65,9 +65,11 @@ The repository is Railway-ready ([`railway.json`](railway.json) builds from the
 `Dockerfile` and runs migrations on every deploy).
 
 1. **New Project → Deploy from GitHub repo** → pick this repository.
-2. **Add a database:** *New → Database → PostgreSQL*. Railway injects
-   `DATABASE_URL` automatically — the app rewrites it to the async driver, so
-   no manual editing is needed.
+2. **Add a database:** *New → Database → PostgreSQL*. Then expose that
+   database URL to the bot service as `DATABASE_URL` (for example with a
+   Railway variable reference to the Postgres service's connection URL). The
+   app rewrites plain Postgres URLs to the async driver, so no manual driver
+   editing is needed.
 3. **Set variables** on the bot service (*Variables* tab):
    `BOT_TOKEN`, `GEMINI_API_KEY`, `ADMIN_IDS`, and optionally `DIGEST_TIME`,
    `TIMEZONE`, `SCORING_BUDGET`, … (see [`.env.example`](.env.example)).

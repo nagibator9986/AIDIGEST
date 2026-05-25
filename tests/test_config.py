@@ -58,6 +58,21 @@ def test_database_url_does_not_require_runtime_secrets(monkeypatch: pytest.Monke
     assert get_database_url() == "postgresql+asyncpg://user:pass@db.example.com:5432/app"
 
 
+def test_railway_database_url_must_be_configured(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RAILWAY_SERVICE_ID", "svc_test")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+    with pytest.raises(ValueError, match="DATABASE_URL is not configured"):
+        get_database_url()
+
+
+def test_railway_rejects_localhost_database_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RAILWAY_SERVICE_ID", "svc_test")
+
+    with pytest.raises(ValueError, match="DATABASE_URL is not configured"):
+        Settings(database_url="postgresql+asyncpg://aidigest:aidigest@localhost:5432/aidigest")
+
+
 def test_normalize_schedule_sorts_and_dedups() -> None:
     assert normalize_schedule(["18:00", "9:00", "09:00"]) == ["09:00", "18:00"]
 
