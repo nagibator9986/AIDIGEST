@@ -14,6 +14,7 @@ from aiogram.enums import ChatMemberStatus, ChatType, ParseMode
 from aiogram.types import ChatMemberUpdated
 
 from app.bot import texts
+from app.bot.schedule import format_weekdays
 from app.config import get_settings
 from app.db import repositories as repo
 from app.db.base import AsyncSession
@@ -46,6 +47,7 @@ async def on_my_chat_member(event: ChatMemberUpdated, bot: Bot, session: AsyncSe
             added_by=event.from_user.id if event.from_user else None,
             default_time=settings.digest_time,
             default_tz=settings.timezone,
+            default_days=settings.digest_days,
         )
         log.info("group.joined", chat_id=chat.id, title=chat.title, created=created)
         try:
@@ -53,6 +55,7 @@ async def on_my_chat_member(event: ChatMemberUpdated, bot: Bot, session: AsyncSe
                 chat.id,
                 texts.WELCOME_GROUP.format(
                     time=html.escape(settings.digest_time),
+                    days=html.escape(format_weekdays(settings.digest_days)),
                     tz=html.escape(settings.timezone),
                 ),
                 parse_mode=ParseMode.HTML,

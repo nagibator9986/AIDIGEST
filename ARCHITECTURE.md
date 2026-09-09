@@ -92,6 +92,10 @@ THRESHOLD ≤ score ≤ 8 → APPROVED   (scheduled digest)
 score > 8             → BREAKING   (urgent push outside the schedule)
 ```
 
+`BREAKING` is gated by `BREAKING_ENABLED`, which is **off** by default: the
+product promise is two deliveries a week and silence in between, so a 9–10 item
+is filed as `APPROVED` and simply leads the next scheduled digest.
+
 ### Moderation (`bot/handlers/moderation.py`)
 
 The legacy moderation router is still present for manual operator workflows,
@@ -102,14 +106,17 @@ wait for approval.
 
 - **Urgent push (4a).** Items in `BREAKING` are broadcast as single-news alerts
   outside the schedule. Day/time restrictions are bypassed; a chat-level pause
-  is still respected.
+  is still respected. Disabled by default (`BREAKING_ENABLED=false`), in which
+  case any `BREAKING` row left in the pool is handed back to the scheduled
+  digest instead of being pushed.
 - **Scheduled digest (4b).** `build_digest` selects the top approved items of
   the last `LOOKBACK_DAYS`, renders a MarkdownV2 post, and marks only the
   delivered items `POSTED`.
 - **Deliver (4c).** A one-minute scheduler tick first flushes urgent items,
   then finds chats whose local weekday and local time match their
   `digest_days` + `digest_times` settings and broadcasts the digest via the
-  rate-limited `Broadcaster`.
+  rate-limited `Broadcaster`. New chats are seeded from `DIGEST_DAYS` /
+  `DIGEST_TIME` — Monday and Friday at 09:00 local — and may override both.
 
 ## 4. Data model
 

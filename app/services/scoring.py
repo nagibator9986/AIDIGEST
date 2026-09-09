@@ -5,7 +5,11 @@ verdict drives a status transition:
 
 * ``score < threshold`` -> REJECTED
 * ``threshold .. 8``    -> APPROVED  (goes out by the chat schedule)
-* ``9 .. 10``           -> BREAKING  (must be pushed immediately)
+* ``9 .. 10``           -> BREAKING  (pushed immediately)
+
+``BREAKING`` is only reachable when ``BREAKING_ENABLED`` is on. With the
+default twice-weekly schedule it is off, so even a 10/10 item is APPROVED and
+simply leads the next scheduled digest.
 
 API calls already retry transient errors internally (see :class:`GeminiClient`);
 an item that still fails has exhausted those retries, so it is marked FAILED
@@ -57,7 +61,7 @@ def decide_status(verdict: GeminiVerdict) -> NewsStatus:
 
     if verdict.score < threshold:
         return NewsStatus.REJECTED
-    if verdict.score > 8:
+    if verdict.score > 8 and settings.breaking_enabled:
         return NewsStatus.BREAKING
     return NewsStatus.APPROVED
 

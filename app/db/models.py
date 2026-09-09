@@ -29,7 +29,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON, Uuid
 
-from app.config import ALL_DIGEST_WEEKDAYS
+from app.config import get_settings
 from app.db.base import Base
 from app.domain.enums import DeliveryStatus, NewsCategory, NewsStatus
 
@@ -68,8 +68,9 @@ class Group(TimestampMixin, Base):
     # `timezone`. One digest is delivered per slot per day.
     digest_times: Mapped[list[str]] = mapped_column(JSONType, default=lambda: ["09:00"])
     # ISO weekdays 1..7 (Mon..Sun) on which the scheduled digest is allowed.
+    # Defaults to the configured product schedule (Mon + Fri).
     digest_days: Mapped[list[int]] = mapped_column(
-        JSONType, default=lambda: list(ALL_DIGEST_WEEKDAYS)
+        JSONType, default=lambda: list(get_settings().digest_days)
     )
     timezone: Mapped[str] = mapped_column(String(64), default="Europe/Moscow")
     # User-controlled pause (distinct from `is_active`, which tracks whether

@@ -11,7 +11,12 @@ from datetime import date, datetime, timedelta
 
 from sqlalchemy import case, func, select, update
 
-from app.config import ALL_DIGEST_WEEKDAYS, normalize_weekdays, parse_hhmm
+from app.config import (
+    ALL_DIGEST_WEEKDAYS,
+    get_settings,
+    normalize_weekdays,
+    parse_hhmm,
+)
 from app.db.base import AsyncSession
 from app.db.models import DeliveryLog, Group, NewsItem
 from app.domain.enums import DeliveryStatus, NewsStatus
@@ -53,7 +58,7 @@ def _resync_schedule_state(group: Group) -> None:
     sends for earlier times. Future slots on the same day remain deliverable.
     """
     if not group.digest_days:
-        group.digest_days = list(ALL_DIGEST_WEEKDAYS)
+        group.digest_days = list(get_settings().digest_days)
     today, passed = _passed_slots(group.digest_times, group.timezone, group.digest_days)
     group.last_digest_on = today if passed else None
     group.sent_slots_today = passed
@@ -68,13 +73,14 @@ async def upsert_group(
     added_by: int | None,
     default_time: str,
     default_tz: str,
+    default_days: list[int] | None = None,
 ) -> tuple[Group, bool]:
     """Insert a group or re-activate an existing one. Returns ``(group, created)``."""
     group = await session.get(Group, chat_id)
+    digest_days = normalize_weekdays(list(default_days or get_settings().digest_days))
 
     if group is None:
         times = [default_time]
-        digest_days = list(ALL_DIGEST_WEEKDAYS)
         today, passed = _passed_slots(times, default_tz, digest_days)
         group = Group(
             id=chat_id,
@@ -95,7 +101,7 @@ async def upsert_group(
     group.chat_type = chat_type or group.chat_type
     group.is_active = True
     if not group.digest_days:
-        group.digest_days = list(ALL_DIGEST_WEEKDAYS)
+        group.digest_days = digest_days
     # On re-activation for a new day, pre-mark slots that have already passed.
     today, passed = _passed_slots(group.digest_times, group.timezone, group.digest_days)
     if group.last_digest_on != today:

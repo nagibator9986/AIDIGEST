@@ -107,3 +107,30 @@ def test_normalize_weekdays_expands_all() -> None:
 def test_normalize_weekdays_rejects_invalid(bad: list[str]) -> None:
     with pytest.raises(ValueError):
         normalize_weekdays(bad)
+
+
+# ── The shipped schedule: twice a week, Monday and Friday morning ──────────
+
+
+def test_default_schedule_is_monday_and_friday_morning() -> None:
+    settings = get_settings()
+    assert settings.digest_days == [1, 5]  # ISO: Mon, Fri
+    assert settings.digest_time == "09:00"
+
+
+def test_urgent_pushes_are_off_by_default() -> None:
+    # Nothing may arrive between the two weekly deliveries.
+    assert get_settings().breaking_enabled is False
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [("1,5", [1, 5]), ("пн,пт", [1, 5]), ("mon, fri", [1, 5]), ("все", [1, 2, 3, 4, 5, 6, 7])],
+)
+def test_digest_days_parsed_from_env_csv(raw: str, expected: list[int]) -> None:
+    assert Settings(digest_days=raw).digest_days == expected
+
+
+def test_digest_days_rejects_unknown_weekday() -> None:
+    with pytest.raises(ValueError):
+        Settings(digest_days="понеделник")

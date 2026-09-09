@@ -27,7 +27,9 @@ async def test_upsert_group_creates_then_reactivates(session: AsyncSession) -> N
     )
     assert created is True
     await session.flush()
-    assert group.digest_days == [1, 2, 3, 4, 5, 6, 7]
+    # The product default: Monday + Friday only.
+    assert group.digest_days == [1, 5]
+    assert group.digest_times == ["09:00"]
 
     group.is_active = False
     await session.flush()
@@ -49,8 +51,9 @@ async def test_upsert_group_creates_then_reactivates(session: AsyncSession) -> N
 async def test_new_group_added_after_slot_skips_today(
     session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Added at 15:00 with a 09:00 slot — first digest must be tomorrow.
-    monkeypatch.setattr(repo, "now_in", lambda _tz: datetime(2026, 5, 21, 15, 0))
+    # Added on a delivery day at 15:00, past the 09:00 slot — it must not
+    # fire within the minute; the next scheduled day gets the first digest.
+    monkeypatch.setattr(repo, "now_in", lambda _tz: datetime(2026, 5, 22, 15, 0))
     group, created = await repo.upsert_group(
         session,
         chat_id=-200,
@@ -61,14 +64,14 @@ async def test_new_group_added_after_slot_skips_today(
         default_tz="UTC",
     )
     assert created is True
-    assert group.last_digest_on == date(2026, 5, 21)
+    assert group.last_digest_on == date(2026, 5, 22)
 
 
 async def test_new_group_added_before_slot_gets_today(
     session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Added at 06:00 with a 09:00 slot — eligible for today's digest.
-    monkeypatch.setattr(repo, "now_in", lambda _tz: datetime(2026, 5, 21, 6, 0))
+    monkeypatch.setattr(repo, "now_in", lambda _tz: datetime(2026, 5, 22, 6, 0))
     group, _ = await repo.upsert_group(
         session,
         chat_id=-201,
@@ -169,14 +172,14 @@ async def test_set_digest_days_replaces_schedule(session: AsyncSession) -> None:
 async def test_set_digest_times_marks_past_slots_as_consumed(
     session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(repo, "now_in", lambda _tz: datetime(2026, 5, 21, 6, 0))
+    monkeypatch.setattr(repo, "now_in", lambda _tz: datetime(2026, 5, 22, 6, 0))
     await _make_group(session, -504)
 
-    monkeypatch.setattr(repo, "now_in", lambda _tz: datetime(2026, 5, 21, 15, 0))
+    monkeypatch.setattr(repo, "now_in", lambda _tz: datetime(2026, 5, 22, 15, 0))
     assert await repo.set_digest_times(session, -504, ["08:00", "20:00"]) is True
     group = await repo.get_group(session, -504)
     assert group is not None
-    assert group.last_digest_on == date(2026, 5, 21)
+    assert group.last_digest_on == date(2026, 5, 22)
     assert group.sent_slots_today == ["08:00"]
 
 
@@ -200,14 +203,14 @@ async def test_set_timezone_recomputes_passed_slots(
     monkeypatch.setattr(
         repo,
         "now_in",
-        lambda tz: datetime(2026, 5, 21, 6, 0) if tz == "UTC" else datetime(2026, 5, 21, 12, 0),
+        lambda tz: datetime(2026, 5, 22, 6, 0) if tz == "UTC" else datetime(2026, 5, 22, 12, 0),
     )
     await _make_group(session, -506)
 
     assert await repo.set_timezone(session, -506, "Asia/Almaty") is True
     group = await repo.get_group(session, -506)
     assert group is not None
-    assert group.last_digest_on == date(2026, 5, 21)
+    assert group.last_digest_on == date(2026, 5, 22)
     assert group.sent_slots_today == ["09:00"]
 
 
@@ -244,16 +247,16 @@ async def test_set_message_thread_unknown_chat(session: AsyncSession) -> None:
 async def test_resume_premarks_past_slots(
     session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(repo, "now_in", lambda _tz: datetime(2026, 5, 21, 6, 0))
+    monkeypatch.setattr(repo, "now_in", lambda _tz: datetime(2026, 5, 22, 6, 0))
     await _make_group(session, -507)
     assert await repo.set_paused(session, -507, True) is True
 
-    monkeypatch.setattr(repo, "now_in", lambda _tz: datetime(2026, 5, 21, 15, 0))
+    monkeypatch.setattr(repo, "now_in", lambda _tz: datetime(2026, 5, 22, 15, 0))
     assert await repo.set_paused(session, -507, False) is True
     group = await repo.get_group(session, -507)
     assert group is not None
     assert group.digest_paused is False
-    assert group.last_digest_on == date(2026, 5, 21)
+    assert group.last_digest_on == date(2026, 5, 22)
     assert group.sent_slots_today == ["09:00"]
 
 

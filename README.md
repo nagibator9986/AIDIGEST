@@ -1,17 +1,18 @@
 # 🤖 AI Insight Digest
 
-A Telegram bot that **collects, semantically scores and broadcasts a daily
-digest of the most significant AI/ML news** — and ruthlessly filters out the
-hype.
+A Telegram bot that **collects, semantically scores and broadcasts a
+twice-weekly digest of the most significant AI/ML news** — and ruthlessly
+filters out the hype.
 
-Every day it pulls from first-party vendor blogs, the AI tech press
+Round the clock it pulls from first-party vendor blogs, the AI tech press
 (TechCrunch, VentureBeat, MIT Technology Review …), Hacker News, Hugging
-Face and GitHub Trending, hands each candidate to **Google Gemini** for a
-1–10 significance score, and delivers a clean, scannable digest of the top
-items to every subscribed chat — each at its own configured time.
+Face and GitHub Trending, and hands each candidate to **Google Gemini** for a
+1–10 significance score. Twice a week — **Monday and Friday morning** — every
+subscribed chat gets a clean, scannable digest of the best of the period, and
+nothing in between.
 
 ```
-collect → deduplicate → score (Gemini) → urgent push / scheduled digest → broadcast
+collect → deduplicate → score (Gemini) → scheduled digest → broadcast
 ```
 
 ---
@@ -23,8 +24,9 @@ collect → deduplicate → score (Gemini) → urgent push / scheduled digest �
 | **Tiered sources** | Vendor blogs + AI tech press (tier 1) → HN/Hugging Face (tier 2) → GitHub/Product Hunt (tier 3), each with its own anti-hype gate. |
 | **Two-layer dedup** | Exact normalised-URL match **and** fuzzy title matching — the same release reported by three sources collapses into one item with merged links. |
 | **Structured AI scoring** | Gemini is called with a Pydantic `response_schema`, so the result is always a typed verdict — never unparseable free text. |
-| **Automatic editorial routing** | Score `< 7` is rejected, `7–8` goes to the scheduled digest automatically, and `9–10` is pushed to chats immediately as an urgent alert. |
-| **Per-chat scheduling** | Each chat picks its own weekdays, delivery times and timezone; the digest is built fresh for every due slot. |
+| **Automatic editorial routing** | Score `< 7` is rejected; everything above it is queued for the next scheduled digest, best items first. |
+| **Quiet by default** | Two deliveries a week, Monday and Friday morning. Out-of-schedule urgent pushes exist but ship disabled (`BREAKING_ENABLED`). |
+| **Per-chat scheduling** | Any chat can override the default weekdays, delivery times and timezone; the digest is built fresh for every due slot. |
 | **Rate-limit aware** | Broadcasting paces itself under Telegram's 30 msg/s ceiling and honours `RetryAfter`. |
 | **Production-ready** | Async end-to-end, structured JSON logs, Alembic migrations, Docker/Compose, healthcheck, CI, full test suite. |
 
@@ -55,7 +57,7 @@ make run            # start the bot
 ```
 
 Then add the bot to any Telegram group — it registers automatically and starts
-delivering the digest.
+delivering the digest on Monday and Friday mornings.
 
 ---
 
@@ -72,7 +74,8 @@ The repository is Railway-ready ([`railway.json`](railway.json) builds from the
    editing is needed.
 3. **Set variables** on the bot service (*Variables* tab):
    `BOT_TOKEN`, `GEMINI_API_KEY`, `ADMIN_IDS`, and optionally `DIGEST_TIME`,
-   `TIMEZONE`, `SCORING_BUDGET`, … (see [`.env.example`](.env.example)).
+   `DIGEST_DAYS`, `TIMEZONE`, `SCORING_BUDGET`, … (see
+   [`.env.example`](.env.example)).
 4. **Deploy.** On each deploy Railway runs `alembic upgrade head` and then the
    bot — see `startCommand` in `railway.json`.
 
@@ -139,7 +142,9 @@ All settings come from environment variables / `.env` — see
 |---|---|---|
 | `SCORE_THRESHOLD` | `7` | Minimum Gemini score to reach a digest |
 | `DIGEST_SIZE` | `5` | Items per digest |
-| `DIGEST_TIME` / `TIMEZONE` | `09:00` / `Europe/Moscow` | Default delivery schedule |
+| `DIGEST_TIME` / `DIGEST_DAYS` | `09:00` / `1,5` | Default delivery slot and weekdays (Mon + Fri) |
+| `TIMEZONE` | `Europe/Moscow` | Timezone new chats are scheduled in |
+| `BREAKING_ENABLED` | `false` | Push 9–10 scored news outside the schedule |
 | `INGEST_INTERVAL_HOURS` | `3` | Collection frequency |
 | `HN_MIN_SCORE` | `100` | Hacker News points floor (anti-hype) |
 

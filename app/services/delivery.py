@@ -209,7 +209,21 @@ async def run_breaking_deliveries(
 
     Day/time restrictions are bypassed, but a chat-level pause is still
     respected as an explicit "do not disturb" switch.
+
+    When ``BREAKING_ENABLED`` is off — the default under the twice-weekly
+    schedule — nothing is pushed: any item already sitting in ``BREAKING`` is
+    handed back to the scheduled digest so it leads the next delivery.
     """
+    if not get_settings().breaking_enabled:
+        async with session_scope() as session:
+            stale = await repo.list_breaking_news(session, item_ids=item_ids)
+            pending = [item.id for item in stale]
+        report = BreakingDeliveryReport(candidates=len(pending))
+        report.downgraded_to_digest = await _downgrade_breaking_to_digest(pending)
+        if pending:
+            log.info("delivery.breaking_disabled", downgraded=report.downgraded_to_digest)
+        return report
+
     items, groups = await _fetch_breaking_candidates(item_ids)
     report = BreakingDeliveryReport(candidates=len(items))
     if not items:

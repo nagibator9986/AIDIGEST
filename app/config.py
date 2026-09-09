@@ -24,7 +24,7 @@ from pydantic_settings import (
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.exc import ArgumentError
 
-_RAW_CSV_FIELDS = {"admin_ids", "extra_rss_feeds"}
+_RAW_CSV_FIELDS = {"admin_ids", "extra_rss_feeds", "digest_days"}
 
 
 def _coerce_async_database_url(value: object) -> object:
@@ -117,10 +117,18 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://aidigest:aidigest@localhost:5432/aidigest"
 
     # ── Digest behaviour ───────────────────────────────────────────────────
+    # The product default: one morning digest on Monday and on Friday, and
+    # nothing else. Both values seed newly registered chats, which may then
+    # override them via /digest_time and /digest_days.
     digest_time: str = "09:00"
+    digest_days: list[int] = Field(default_factory=lambda: [1, 5])
     timezone: str = "Europe/Moscow"
     digest_size: int = Field(default=5, ge=1, le=20)
     score_threshold: int = Field(default=7, ge=1, le=10)
+    # Out-of-schedule alerts for top-scored news. Off by default: the whole
+    # point of the twice-weekly schedule is that nothing arrives between the
+    # two slots. Urgent items simply wait for the next one.
+    breaking_enabled: bool = False
 
     # ── Ingestion ──────────────────────────────────────────────────────────
     ingest_interval_hours: int = Field(default=3, ge=1, le=24)
@@ -173,6 +181,19 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [part.strip() for part in value.split(",") if part.strip()]
         return value
+
+    @field_validator("digest_days", mode="before")
+    @classmethod
+    def _normalize_digest_days(cls, value: object) -> object:
+        """Accept ``DIGEST_DAYS=пн,пт`` / ``mon,fri`` / ``1,5`` alike."""
+        tokens = (
+            [part.strip() for part in value.split(",") if part.strip()]
+            if isinstance(value, str)
+            else value
+        )
+        if isinstance(tokens, list | tuple):
+            return normalize_weekdays(list(tokens))
+        return tokens
 
     @field_validator("producthunt_token", mode="before")
     @classmethod
